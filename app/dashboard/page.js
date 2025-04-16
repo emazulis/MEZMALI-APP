@@ -6,9 +6,9 @@ import { toast } from 'react-hot-toast';
 
 const TimeTrackerDynamic = dynamic(
   () => import('@/components/time-tracker/TimeTracker'),
-  {
+  { 
     loading: () => <div>Loading time tracker...</div>,
-    ssr: false
+    ssr: false 
   }
 );
 
@@ -80,7 +80,7 @@ export default function Dashboard() {
     );
   }
 
-  // Treat sessions with "active" or "on-break" status as the current session
+  // Treat sessions with "active" or "on-break" status as current
   const activeSession = sessions.find(
     (s) => s.status === 'active' || s.status === 'on-break'
   );
@@ -92,16 +92,6 @@ export default function Dashboard() {
     const hrs = Math.floor(seconds / 3600);
     const mins = Math.floor((seconds % 3600) / 60);
     return `${hrs}h ${mins}m`;
-  };
-
-  // For the last session, subtract the break time from the raw duration
-  const getEffectiveDuration = (session) => {
-    if (!session.duration) return null;
-    const totalBreakTime = session.breaks?.reduce(
-      (total, breakItem) => total + (breakItem.duration || 0),
-      0
-    ) || 0;
-    return session.duration - totalBreakTime;
   };
 
   return (
@@ -191,37 +181,24 @@ export default function Dashboard() {
                     <div className="bg-green-50 p-4 rounded-lg border border-green-200">
                       <h4 className="font-medium text-gray-900">Last Session</h4>
                       <div className="grid grid-cols-2 gap-2 mt-2">
+                        {/* Clock In and Clock Out sections remain the same */}
+                        
                         <div>
-                          <p className="text-sm text-gray-700">Clock In:</p>
+                          <p className="text-sm text-gray-700">Effective Duration:</p>
                           <p className="font-medium text-gray-900">
-                            {new Date(lastSession.startTime).toLocaleString([], {
-                              month: 'numeric',
-                              day: 'numeric',
-                              year: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            })}
+                            {lastSession.duration ? 
+                              `${Math.floor(lastSession.duration / 3600)}h ${Math.floor((lastSession.duration % 3600) / 60)}m` : 
+                              '0h 0m'}
                           </p>
                         </div>
                         <div>
-                          <p className="text-sm text-gray-700">Clock Out:</p>
+                          <p className="text-sm text-gray-700">Break Duration:</p>
                           <p className="font-medium text-gray-900">
-                            {lastSession.endTime ? 
-                              new Date(lastSession.endTime).toLocaleString([], {
-                                month: 'numeric',
-                                day: 'numeric',
-                                year: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit'
-                              }) : 'N/A'}
-                          </p>
-                        </div>
-                        <div className="col-span-2">
-                          <p className="text-sm text-gray-700">Duration:</p>
-                          <p className="font-medium text-gray-900">
-                            {lastSession.duration 
-                              ? formatDuration(getEffectiveDuration(lastSession))
-                              : 'Not calculated'}
+                            {(() => {
+                              const totalSeconds = lastSession.breaks?.reduce((total, breakItem) => 
+                                total + (breakItem.duration || 0), 0) || 0;
+                              return `${Math.floor(totalSeconds / 3600)}h ${Math.floor((totalSeconds % 3600) / 60)}m`;
+                            })()}
                           </p>
                         </div>
                       </div>
