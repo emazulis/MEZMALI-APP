@@ -6,9 +6,9 @@ import { toast } from 'react-hot-toast';
 
 const TimeTrackerDynamic = dynamic(
   () => import('@/components/time-tracker/TimeTracker'),
-  { 
+  {
     loading: () => <div>Loading time tracker...</div>,
-    ssr: false 
+    ssr: false
   }
 );
 
@@ -20,7 +20,8 @@ export default function Dashboard() {
   const [entriesLoading, setEntriesLoading] = useState(true);
 
   useEffect(() => {
-    const userData = JSON.parse(localStorage.getItem('currentUser'));
+    const storedUser = localStorage.getItem('currentUser');
+    const userData = storedUser ? JSON.parse(storedUser) : null;
     if (!userData) {
       router.push('/login');
     } else {
@@ -36,7 +37,7 @@ export default function Dashboard() {
       const response = await fetch('/api/time-entries', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
           userId: userId,
@@ -79,9 +80,29 @@ export default function Dashboard() {
     );
   }
 
-  const activeSession = sessions.find(s => s.status === 'active');
-  const completedSessions = sessions.filter(s => s.status === 'completed');
+  // Treat sessions with "active" or "on-break" status as the current session
+  const activeSession = sessions.find(
+    (s) => s.status === 'active' || s.status === 'on-break'
+  );
+  const completedSessions = sessions.filter((s) => s.status === 'completed');
   const lastSession = completedSessions[0] || null;
+
+  // Helper function to format seconds into "HHh MMm"
+  const formatDuration = (seconds) => {
+    const hrs = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
+    return `${hrs}h ${mins}m`;
+  };
+
+  // For the last session, subtract the break time from the raw duration
+  const getEffectiveDuration = (session) => {
+    if (!session.duration) return null;
+    const totalBreakTime = session.breaks?.reduce(
+      (total, breakItem) => total + (breakItem.duration || 0),
+      0
+    ) || 0;
+    return session.duration - totalBreakTime;
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-8">
@@ -123,23 +144,17 @@ export default function Dashboard() {
             <h2 className="text-xl font-semibold mb-4 text-gray-900">
               Time Tracking
             </h2>
-            
-            {TimeTrackerDynamic ? (
-              <TimeTrackerDynamic 
-                userId={user._id} 
-                onSessionUpdate={handleSessionUpdate}
-              />
-            ) : (
-              <div className="text-red-600">
-                TimeTracker component failed to load. Please refresh.
-              </div>
-            )}
+
+            <TimeTrackerDynamic 
+              userId={user._id} 
+              onSessionUpdate={handleSessionUpdate}
+            />
 
             <div className="mt-8">
               <h3 className="text-lg font-semibold mb-4 text-gray-900">
                 Your Time Sessions
               </h3>
-              
+
               {entriesLoading ? (
                 <div className="flex justify-center">
                   <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-blue-500"></div>
@@ -164,7 +179,9 @@ export default function Dashboard() {
                         </div>
                         <div>
                           <p className="text-sm text-gray-700">Status:</p>
-                          <p className="font-medium text-green-600">ACTIVE</p>
+                          <p className={`font-medium ${activeSession.status === 'on-break' ? 'text-yellow-600' : 'text-green-600'}`}>
+                            {activeSession.status === 'on-break' ? 'ON BREAK' : 'ACTIVE'}
+                          </p>
                         </div>
                       </div>
                     </div>
@@ -202,9 +219,9 @@ export default function Dashboard() {
                         <div className="col-span-2">
                           <p className="text-sm text-gray-700">Duration:</p>
                           <p className="font-medium text-gray-900">
-                            {lastSession.duration ? 
-                              `${Math.floor(lastSession.duration / 3600)}h ${Math.floor((lastSession.duration % 3600) / 60)}m` : 
-                              'Not calculated'}
+                            {lastSession.duration 
+                              ? formatDuration(getEffectiveDuration(lastSession))
+                              : 'Not calculated'}
                           </p>
                         </div>
                       </div>

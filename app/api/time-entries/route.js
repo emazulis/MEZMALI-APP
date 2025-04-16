@@ -38,7 +38,6 @@ export async function POST(req) {
         success: true,
         sessionId: result.insertedId 
       });
-
     } else if (action === 'clock-out') {
       const activeEntry = await db.collection('timeEntries').findOne({
         userId, 
@@ -64,7 +63,6 @@ export async function POST(req) {
         success: true,
         duration 
       });
-
     } else if (action === 'get-sessions') {
       const sessions = await db.collection('timeEntries')
         .find({ userId })
@@ -73,11 +71,51 @@ export async function POST(req) {
         .toArray();
       
       return Response.json({ sessions });
-
+    } else if (action === 'start-break') {
+      // Find the active session for this user
+      const activeEntry = await db.collection('timeEntries').findOne({
+        userId,
+        status: 'active'
+      });
+      if (!activeEntry) {
+        return Response.json({ error: 'No active session' }, { status: 400 });
+      }
+      // Update the session to indicate it is on break. Save the breakStart timestamp.
+      await db.collection('timeEntries').updateOne(
+        { _id: activeEntry._id },
+        { $set: { status: 'on-break', breakStart: new Date() } }
+      );
+      return Response.json({ success: true });
+    } else if (action === 'end-break') {
+      // Find the session that is currently on break
+      const entryOnBreak = await db.collection('timeEntries').findOne({
+        userId,
+        status: 'on-break'
+      });
+      if (!entryOnBreak) {
+        return Response.json({ error: 'Not currently on break' }, { status: 400 });
+      }
+      // Calculate break duration based on the stored breakStart time
+      const breakDuration = Math.floor((new Date() - new Date(entryOnBreak.breakStart)) / 1000);
+      await db.collection('timeEntries').updateOne(
+        { _id: entryOnBreak._id },
+        { 
+          $set: { 
+            status: 'active'
+          },
+          $push: { 
+            breaks: {
+              start: entryOnBreak.breakStart,
+              end: new Date(),
+              duration: breakDuration
+            }
+          }
+        }
+      );
+      return Response.json({ success: true });
     } else {
       return Response.json({ error: 'Invalid action' }, { status: 400 });
     }
-
   } catch (e) {
     console.error('API Error:', e);
     return Response.json({ error: 'Internal server error' }, { status: 500 });
