@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { toast } from 'react-hot-toast';
+import Link from 'next/link';
 
 const TimeTrackerDynamic = dynamic(
   () => import('@/components/time-tracker/TimeTracker'),
@@ -178,33 +179,89 @@ export default function Dashboard() {
                   )}
 
                   {lastSession ? (
-                    <div className="bg-green-50 p-4 rounded-lg border border-green-200">
-                      <h4 className="font-medium text-gray-900">Last Session</h4>
-                      <div className="grid grid-cols-2 gap-2 mt-2">
-                        {/* Clock In and Clock Out sections remain the same */}
-                        
-                        <div>
-                          <p className="text-sm text-gray-700">Effective Duration:</p>
-                          <p className="font-medium text-gray-900">
-                            {lastSession.duration ? 
-                              `${Math.floor(lastSession.duration / 3600)}h ${Math.floor((lastSession.duration % 3600) / 60)}m` : 
-                              '0h 0m'}
-                          </p>
+                    <div className="space-y-4">
+                      <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                        <h4 className="font-medium text-gray-900 mb-4">Last Session</h4>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <div>
+                              <p className="text-sm text-gray-700">Clock In:</p>
+                              <p className="font-medium text-gray-900">
+                                {new Date(lastSession.startTime).toLocaleString([], {
+                                  month: 'numeric',
+                                  day: 'numeric',
+                                  year: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                })}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-sm text-gray-700">Effective Duration:</p>
+                              <p className="font-medium text-gray-900">
+                                {lastSession.duration ? 
+                                  `${Math.floor(lastSession.duration / 3600)}h ${Math.floor((lastSession.duration % 3600) / 60)}m` : 
+                                  '0h 0m'}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            <div>
+                              <p className="text-sm text-gray-700">Clock Out:</p>
+                              <p className="font-medium text-gray-900">
+                                {lastSession.endTime ? 
+                                  new Date(lastSession.endTime).toLocaleString([], {
+                                    month: 'numeric',
+                                    day: 'numeric',
+                                    year: 'numeric',
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                  }) : 
+                                  'N/A'}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-sm text-gray-700">Break Duration:</p>
+                              <p className="font-medium text-gray-900">
+                                {(() => {
+                                  const totalSeconds = lastSession.breaks?.reduce((total, breakItem) => 
+                                    total + (breakItem.duration || 0), 0) || 0;
+                                  return `${Math.floor(totalSeconds / 3600)}h ${Math.floor((totalSeconds % 3600) / 60)}m`;
+                                })()}
+                              </p>
+                            </div>
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-sm text-gray-700">Break Duration:</p>
-                          <p className="font-medium text-gray-900">
-                            {(() => {
-                              const totalSeconds = lastSession.breaks?.reduce((total, breakItem) => 
-                                total + (breakItem.duration || 0), 0) || 0;
-                              return `${Math.floor(totalSeconds / 3600)}h ${Math.floor((totalSeconds % 3600) / 60)}m`;
-                            })()}
-                          </p>
-                        </div>
+                      </div>
+                      <div className="flex justify-center">
+                        <Link 
+                          href="/sessions" 
+                          className="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center gap-1"
+                        >
+                          View All Sessions
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                        </Link>
                       </div>
                     </div>
                   ) : (
-                    <p className="text-gray-700">No previous sessions found</p>
+                    <div className="space-y-4">
+                      <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                        <p className="text-gray-700">No previous sessions found</p>
+                      </div>
+                      <div className="flex justify-center">
+                        <Link 
+                          href="/sessions" 
+                          className="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center gap-1"
+                        >
+                          View All Sessions
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                        </Link>
+                      </div>
+                    </div>
                   )}
                 </div>
               )}
