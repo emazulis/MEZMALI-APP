@@ -39,6 +39,7 @@ export async function POST(req) {
       username,
       email,
       password:     hashed,
+      role: 'user',           // ← everyone signs up as a regular user
       pin,
       pinCreatedAt,
       createdAt:    new Date()
