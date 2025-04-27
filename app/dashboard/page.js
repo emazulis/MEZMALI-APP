@@ -130,37 +130,41 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-8">
       <div className="max-w-6xl mx-auto">
-        <header className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
-              Employee Dashboard
-            </h1>
-            <p className="text-gray-800">
-              Welcome back, <span className="font-semibold">{user.username}</span>
-            </p>
-          </div>
-          <button
-            onClick={() => {
-              localStorage.removeItem('currentUser');
-              router.push('/login');
-            }}
-            className="flex items-center gap-2 text-red-600 hover:text-red-800 px-4 py-2 rounded-lg border border-red-200 hover:bg-red-50"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-5 w-5"
-              viewBox="0 0 20 20"
-              fill="currentColor"
-            >
-              <path
-                fillRule="evenodd"
-                d="M3 3a1 1 0 00-1 1v12a1 1 0 102 0V4a1 1 0 00-1-1zm10.293 9.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L14.586 9H7a1 1 0 100 2h7.586l-1.293 1.293z"
-                clipRule="evenodd"
-              />
-            </svg>
-            Logout
-          </button>
-        </header>
+      <header className="flex justify-between items-center mb-8">
+        {/* Left side: title + greeting + admin link */}
+        <div className="space-y-1">
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
+            Employee Dashboard
+          </h1>
+          <p className="text-gray-800">
+            Welcome back, <span className="font-semibold">{user.username}</span>
+          </p>
+
+          {user.role === 'admin' && (
+            <Link href="/admin">
+              <button
+                className="mt-4 w-full md:w-auto px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition"
+              >
+                🚀 Go to Admin Console
+              </button>
+            </Link>
+          )}
+        </div>
+
+        {/* Right side: logout button */}
+        <button
+          onClick={() => {
+            localStorage.removeItem('currentUser');
+            router.push('/login');
+          }}
+          className="flex items-center gap-2 text-red-600 hover:text-red-800 px-4 py-2 rounded-lg border border-red-200 hover:bg-red-50"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7" />
+          </svg>
+          Logout
+        </button>
+      </header>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 bg-white p-6 rounded-xl shadow-sm">
