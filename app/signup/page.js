@@ -1,69 +1,66 @@
 'use client';
+
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
+import Link          from 'next/link';
 
 export default function SignupPage() {
   const [formData, setFormData] = useState({
-    username: '',
-    email: '',
-    password: '',
-    confirmPassword: ''
+    username:       '',
+    email:          '',
+    password:       '',
+    confirmPassword:'',
   });
   const [error, setError] = useState('');
   const router = useRouter();
 
-  const handleChange = (e) => {
+  // update form fields
+  const handleChange = e => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    setFormData(f => ({ ...f, [name]: value }));
   };
 
-  const handleSubmit = async (e) => {
+  // on submit, call /api/signup and show PIN
+  const handleSubmit = async e => {
     e.preventDefault();
     setError('');
-  
-    // Client-side validation
-    if (!formData.username || !formData.email || !formData.password) {
-      setError("All fields are required");
+
+    // basic client-side validation
+    const { username, email, password, confirmPassword } = formData;
+    if (!username || !email || !password) {
+      setError('All fields are required');
       return;
     }
-  
-    if (formData.password !== formData.confirmPassword) {
+    if (password !== confirmPassword) {
       setError("Passwords don't match");
       return;
     }
-  
+
     try {
-      const response = await fetch('/api/signup', {
-        method: 'POST',
+      const res = await fetch('/api/signup', {
+        method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          username: formData.username,
-          email: formData.email,
-          password: formData.password
-        }),
+        body:    JSON.stringify({ username, email, password }),
       });
-  
-      const data = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(data.error);
-      }
-  
-      // Clear form on success
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+      // show the generated PIN (valid 7 days)
+      alert(
+        `🎉 Your account has been created!\n` +
+        `Your 4-digit PIN is: ${data.pin}\n\n` +
+        `Save it somewhere safe—it's valid for 7 days.`
+      );
+
+      // clear form & navigate to login
       setFormData({
-        username: '',
-        email: '',
-        password: '',
-        confirmPassword: ''
+        username:       '',
+        email:          '',
+        password:       '',
+        confirmPassword:'',
       });
-      
-      // Redirect to login
       router.push('/login');
-      
     } catch (err) {
       setError(err.message);
     }
@@ -73,9 +70,13 @@ export default function SignupPage() {
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
       <div className="bg-white p-8 rounded-lg shadow-md w-96">
         <h1 className="text-2xl font-bold mb-6">Create Account</h1>
-        
-        {error && <div className="mb-4 p-2 text-red-500 bg-red-50 rounded">{error}</div>}
-        
+
+        {error && (
+          <div className="mb-4 p-2 text-red-600 bg-red-100 rounded">
+            {error}
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-gray-700 mb-1">Username</label>
@@ -88,7 +89,7 @@ export default function SignupPage() {
               required
             />
           </div>
-          
+
           <div>
             <label className="block text-gray-700 mb-1">Email</label>
             <input
@@ -100,7 +101,7 @@ export default function SignupPage() {
               required
             />
           </div>
-          
+
           <div>
             <label className="block text-gray-700 mb-1">Password</label>
             <input
@@ -112,7 +113,7 @@ export default function SignupPage() {
               required
             />
           </div>
-          
+
           <div>
             <label className="block text-gray-700 mb-1">Confirm Password</label>
             <input
@@ -124,16 +125,16 @@ export default function SignupPage() {
               required
             />
           </div>
-          
+
           <button
             type="submit"
-            className="w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700"
+            className="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700"
           >
             Sign Up
           </button>
         </form>
-        
-        <p className="mt-4 text-center">
+
+        <p className="mt-4 text-center text-gray-600">
           Already have an account?{' '}
           <Link href="/login" className="text-blue-600 hover:underline">
             Login

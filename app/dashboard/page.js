@@ -1,99 +1,131 @@
 'use client';
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import dynamic from 'next/dynamic';
-import { toast } from 'react-hot-toast';
-import Link from 'next/link';
-import MonthlyStats from '@/components/MonthlyStats/MonthlyStats';
 
+import { useState, useEffect } from 'react';
+import { useRouter }        from 'next/navigation';
+import dynamic              from 'next/dynamic';
+import { toast }            from 'react-hot-toast';
+import Link                 from 'next/link';
+import MonthlyStats         from '@/components/MonthlyStats/MonthlyStats';
 
 const TimeTrackerDynamic = dynamic(
   () => import('@/components/time-tracker/TimeTracker'),
-  { 
+  {
     loading: () => <div>Loading time tracker...</div>,
-    ssr: false 
+    ssr: false,
   }
 );
 
 export default function Dashboard() {
   const router = useRouter();
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [sessions, setSessions] = useState([]);
+  const [loadingUser, setLoadingUser] = useState(true);
+  const [user, setUser]               = useState(null);
+  const [sessions, setSessions]             = useState([]);
   const [entriesLoading, setEntriesLoading] = useState(true);
+  const PIN_LIFESPAN_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+  const [pinRevealed, setPinRevealed] = useState(false);
+  const [rotating,  setRotating]      = useState(false);
 
-  useEffect(() => {
-    const storedUser = localStorage.getItem('currentUser');
-    const userData = storedUser ? JSON.parse(storedUser) : null;
-    if (!userData) {
-      router.push('/login');
-    } else {
-      setUser(userData);
-      setLoading(false);
-      fetchSessions(userData._id);
-    }
-  }, [router]);
+  const formatDuration = (secs) => {
+    const h = Math.floor(secs / 3600);
+    const m = Math.floor((secs % 3600) / 60);
+    return `${h}h ${m}m`;
+  };
 
-  const fetchSessions = async (userId) => {
+  async function regeneratePin() {
+    setRotating(true);
     try {
-      setEntriesLoading(true);
-      const response = await fetch('/api/time-entries', {
+      const res = await fetch('/api/regenerate-pin', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          userId: userId,
-          action: 'get-sessions'
-        })
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ userId: user._id })
       });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed');
+      // update local state and localStorage
+      const updated = { ...user, pin: data.pin, pinCreatedAt: data.pinCreatedAt };
+      setUser(updated);
+      localStorage.setItem('currentUser', JSON.stringify(updated));
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setRotating(false);
+    }
+  }
 
-      if (!response.ok) {
-        throw new Error(`Failed to fetch sessions: ${response.status}`);
-      }
-
-      const data = await response.json();
-      setSessions(data.sessions || []);
-    } catch (error) {
-      console.error('Error fetching sessions:', error);
-      toast.error('Failed to load session data');
+  // ─── 5) fetchSessions helper ─────────────────────────────────
+  const fetchSessions = async (userId) => {
+    setEntriesLoading(true);
+    try {
+      const res = await fetch('/api/time-entries', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, action: 'get-sessions' }),
+      });
+      if (!res.ok) throw new Error(`Status ${res.status}`);
+      const { sessions = [] } = await res.json();
+      setSessions(sessions);
+    } catch (err) {
+      console.error('Error fetching sessions:', err);
+      toast.error('Failed to load sessions');
       setSessions([]);
     } finally {
       setEntriesLoading(false);
     }
   };
 
+  // ─── 6) handleSessionUpdate ──────────────────────────────────
+  //    We'll pass this to the time tracker so, on clock-out/break, 
+  //    we re-fetch the sessions list.
   const handleSessionUpdate = () => {
-    fetchSessions(user._id);
+    if (user) fetchSessions(user._id);
   };
 
-  if (loading) {
+  // ─── 7) Load user from localStorage ───────────────────────────
+  useEffect(() => {
+    const stored = localStorage.getItem('currentUser');
+    if (!stored) {
+      router.push('/login');
+      return;
+    }
+    let parsed;
+    try {
+      parsed = JSON.parse(stored);
+    } catch {
+      router.push('/login');
+      return;
+    }
+    setUser(parsed);
+    setLoadingUser(false);
+  }, [router]);
+
+  // ─── 8) Fetch sessions once we know who the user is ──────────
+  useEffect(() => {
+    if (user) {
+      fetchSessions(user._id);
+    }
+  }, [user]);
+
+  // ─── 9) Early‐return while loading or not logged in ───────────
+  if (loadingUser) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+        <div className="animate-spin h-12 w-12 border-t-2 border-b-2 border-blue-500 rounded-full" />
       </div>
     );
   }
-
   if (!user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p>Redirecting to login...</p>
-      </div>
-    );
+    router.push('/login');
+    return null;
   }
 
-  const activeSession = sessions.find(
-    (s) => s.status === 'active' || s.status === 'on-break'
-  );
-  const completedSessions = sessions.filter((s) => s.status === 'completed');
-  const lastSession = completedSessions[0] || null;
+  const pinAgeMs = Date.now() - new Date(user.pinCreatedAt).getTime();
+  const showPin  = !!user.pin && pinAgeMs <= PIN_LIFESPAN_MS;
 
-  const formatDuration = (seconds) => {
-    const hrs = Math.floor(seconds / 3600);
-    const mins = Math.floor((seconds % 3600) / 60);
-    return `${hrs}h ${mins}m`;
-  };
+  // ─── 11) Session summaries ────────────────────────────────────
+  const activeSession     = sessions.find(s => s.status === 'active' || s.status === 'on-break');
+  const completedSessions = sessions.filter(s => s.status === 'completed');
+  const lastSession       = completedSessions[0] || null;
+
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-8">
@@ -299,6 +331,33 @@ export default function Dashboard() {
                   {new Date(user.createdAt).toLocaleDateString()}
                 </p>
               </div>
+              { showPin && (
+                  <div className="mt-4">
+                  <p className="text-sm text-gray-700">
+                    <button
+                      onClick={() => setPinRevealed(r => !r)}
+                      className="text-blue-600 hover:underline"
+                    >
+                      Your PIN
+                    </button>
+                  </p>
+                
+                  {pinRevealed && (
+                    <div className="mt-2 flex items-center space-x-4">
+                      <span className="font-mono text-xl tracking-widest text-gray-900">
+                        {user.pin}
+                      </span>
+                      <button
+                        onClick={regeneratePin}
+                        disabled={rotating}
+                        className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 text-sm"
+                      >
+                        {rotating ? '…' : 'Generate New PIN'}
+                      </button>
+                    </div>
+                  )}
+                </div>
+                )}  
             </div>
           </div>
         </div>
