@@ -23,10 +23,33 @@ export async function POST(req) {
       return Response.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
+    // Get database connection
     const client = await clientPromise;
     const db = client.db("employee-time-tracker");
     const now = new Date();
     console.log('[API] Server time:', now.toISOString());
+
+    if (action === 'get-monthly-duration') {
+  const now = new Date();
+  const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  
+  const sessions = await db.collection('timeEntries')
+    .find({
+      userId: userId,
+      status: "completed",
+      endTime: { $gte: firstDayOfMonth }
+    })
+    .toArray();
+
+  // Calculate NET work duration (total - breaks)
+  const totalDuration = sessions.reduce((sum, session) => {
+    const sessionDuration = session.duration || 0;
+    const breakDuration = session.breaks?.reduce((bSum, b) => bSum + (b.duration || 0), 0) || 0;
+    return sum + (sessionDuration - breakDuration);
+  }, 0);
+
+  return Response.json({ totalDuration });
+}
 
     if (action === 'clock-in') {
       console.log('[API] Handling clock-in for user:', userId);

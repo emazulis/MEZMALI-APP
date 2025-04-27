@@ -195,9 +195,18 @@ export default function SessionsPage() {
                           </div>
 
                           <div className="col-span-2">
-                            {session.duration ? 
-                              `${Math.floor(session.duration / 3600)}h ${Math.floor((session.duration % 3600) / 60)}m` : 
-                              '0h 0m'}
+                            {session.duration ? (() => {
+                              const totalBreakSeconds = session.breaks?.reduce(
+                                (sum, br) => sum + (br.duration || 0), 
+                                0
+                              ) || 0;
+
+                              const netSeconds = Math.max((session.duration || 0) - totalBreakSeconds, 0);
+                              const hours      = Math.floor(netSeconds / 3600);
+                              const mins       = Math.floor((netSeconds % 3600) / 60);
+
+                              return `${hours}h ${mins}m`;
+                            })() : '0h 0m'}
                           </div>
 
                           <div className="col-span-2">

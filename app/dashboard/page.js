@@ -4,6 +4,8 @@ import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { toast } from 'react-hot-toast';
 import Link from 'next/link';
+import MonthlyStats from '@/components/MonthlyStats/MonthlyStats';
+
 
 const TimeTrackerDynamic = dynamic(
   () => import('@/components/time-tracker/TimeTracker'),
@@ -81,14 +83,12 @@ export default function Dashboard() {
     );
   }
 
-  // Treat sessions with "active" or "on-break" status as current
   const activeSession = sessions.find(
     (s) => s.status === 'active' || s.status === 'on-break'
   );
   const completedSessions = sessions.filter((s) => s.status === 'completed');
   const lastSession = completedSessions[0] || null;
 
-  // Helper function to format seconds into "HHh MMm"
   const formatDuration = (seconds) => {
     const hrs = Math.floor(seconds / 3600);
     const mins = Math.floor((seconds % 3600) / 60);
@@ -199,9 +199,15 @@ export default function Dashboard() {
                             <div>
                               <p className="text-sm text-gray-700">Effective Duration:</p>
                               <p className="font-medium text-gray-900">
-                                {lastSession.duration ? 
-                                  `${Math.floor(lastSession.duration / 3600)}h ${Math.floor((lastSession.duration % 3600) / 60)}m` : 
-                                  '0h 0m'}
+                                {(() => {
+                                  const raw         = lastSession.duration || 0;
+                                  const totalBreaks = lastSession.breaks?.reduce(
+                                    (sum, b) => sum + (b.duration || 0),
+                                    0
+                                  ) || 0;
+                                  const netSeconds  = Math.max(raw - totalBreaks, 0);
+                                  return formatDuration(netSeconds);
+                                })()}
                               </p>
                             </div>
                           </div>
@@ -226,7 +232,7 @@ export default function Dashboard() {
                                 {(() => {
                                   const totalSeconds = lastSession.breaks?.reduce((total, breakItem) => 
                                     total + (breakItem.duration || 0), 0) || 0;
-                                  return `${Math.floor(totalSeconds / 3600)}h ${Math.floor((totalSeconds % 3600) / 60)}m`;
+                                  return formatDuration(totalSeconds);
                                 })()}
                               </p>
                             </div>
@@ -270,9 +276,15 @@ export default function Dashboard() {
 
           <div className="bg-white p-6 rounded-xl shadow-sm">
             <h2 className="text-xl font-semibold mb-4 text-gray-900">
-              Your Profile
+              Your Stats
             </h2>
-            <div className="space-y-4">
+            
+            <MonthlyStats userId={user._id} />
+            
+            <div className="space-y-4 mt-6">
+              <h3 className="text-lg font-semibold text-gray-900">
+                Your Profile
+              </h3>
               <div>
                 <p className="text-sm text-gray-700">Username</p>
                 <p className="font-medium text-gray-900">{user.username}</p>
