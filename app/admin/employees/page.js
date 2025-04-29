@@ -12,12 +12,19 @@ export default function EmployeesPage() {
   const [loading, setLoading] = useState(true);
 
   // Menu states
-  const [openMenu, setOpenMenu] = useState(null);          // for three-dots menu
-  const [openStatusMenu, setOpenStatusMenu] = useState(null); // for status pencil menu
+  const [openMenu, setOpenMenu] = useState(null);
+  const [openStatusMenu, setOpenStatusMenu] = useState(null);
 
   // Username edit
   const [editingUsernameId, setEditingUsernameId] = useState(null);
   const [newUsername, setNewUsername] = useState('');
+
+  // Format a duration in seconds to Hh Mm
+  const formatDuration = (secs) => {
+    const h = Math.floor(secs / 3600);
+    const m = Math.floor((secs % 3600) / 60);
+    return h > 0 ? `${h}h ${m}m` : `${m}m`;
+  };
 
   useEffect(() => {
     const stored = localStorage.getItem('currentUser');
@@ -31,10 +38,18 @@ export default function EmployeesPage() {
     setLoading(true);
     try {
       const res = await fetch('/api/admin/employees');
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
-      setEmployees(data.employees);
+      let data = {};
+      try {
+        data = await res.json();
+      } catch {
+        // Non-JSON response
+      }
+      if (!res.ok) {
+        throw new Error(data.error || `Failed to fetch employees: ${res.status}`);
+      }
+      setEmployees(data.employees || []);
     } catch (err) {
+      console.error(err);
       toast.error(err.message);
     } finally {
       setLoading(false);
@@ -45,7 +60,6 @@ export default function EmployeesPage() {
     if (user) fetchEmployees();
   }, [user]);
 
-  // Global click handler to close any open menu or edit
   useEffect(() => {
     const onClick = (e) => {
       if (
@@ -77,9 +91,7 @@ export default function EmployeesPage() {
     }
   };
 
-  const handleViewDetails = (empId) => {
-    router.push(`/admin/employees/${empId}`);
-  };
+  const handleViewDetails = (empId) => router.push(`/admin/employees/${empId}`);
 
   const handleEditUsername = async (empId) => {
     if (!newUsername.trim()) return toast.error('Username cannot be empty');
@@ -121,7 +133,7 @@ export default function EmployeesPage() {
 
   if (!user) return null;
 
-  // Stats
+  // Stats including on-break
   const totalCount = employees.length;
   const clockedInCount = employees.filter(e => e.status === 'active' || e.status === 'on-break').length;
   const onBreakCount = employees.filter(e => e.status === 'on-break').length;
@@ -129,11 +141,34 @@ export default function EmployeesPage() {
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-6xl mx-auto space-y-6">
-        <header className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold">Employee Overview</h1>
-          <Link href="/admin">
-            <button className="px-3 py-1 bg-gray-200 rounded">← Back</button>
-          </Link>
+      <header className="flex items-center justify-between">
+      <h1 className="text-2xl font-bold text-gray-900">Employee Overview</h1>
+          <div className="flex gap-2">
+            {/* logout */}
+            <button
+              onClick={() => {
+                localStorage.removeItem('currentUser');
+                router.push('/login');
+              }}
+              className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition"
+            >
+              Logout
+            </button>
+
+            {/* back to Admin Console */}
+            <Link href="/admin">
+              <button className="px-3 py-1 bg-gray-200 hover:bg-gray-300 rounded transition">
+                ← Back
+              </button>
+            </Link>
+
+            {/* NEW: assign task */}
+            <Link href="/admin/tasks/create">
+              <button className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition">
+                Assign Task
+              </button>
+            </Link>
+          </div>
         </header>
 
         {!loading && (
