@@ -185,7 +185,7 @@ export default function Dashboard() {
               <button
                 className="mt-4 w-full md:w-auto px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition"
               >
-                🚀 Employees
+                🚀 Overview
               </button>
             </Link>
           )}

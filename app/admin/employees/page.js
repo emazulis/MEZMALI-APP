@@ -142,8 +142,8 @@ export default function EmployeesPage() {
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-6xl mx-auto space-y-6">
       <header className="flex items-center justify-between">
-      <h1 className="text-2xl font-bold text-gray-900">Employee Overview</h1>
-          <div className="flex gap-2">
+      <h1 className="text-2xl font-bold text-gray-900">Overview</h1>
+        <div className="flex gap-2">
             {/* logout */}
             <button
               onClick={() => {
@@ -156,9 +156,15 @@ export default function EmployeesPage() {
             </button>
 
             {/* back to Admin Console */}
-            <Link href="/admin">
+            <Link href="/dashboard">
               <button className="px-3 py-1 bg-gray-200 hover:bg-gray-300 rounded transition">
                 ← Back
+              </button>
+            </Link>
+
+            <Link href="/admin/tasks">
+              <button className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition">
+                Tasks
               </button>
             </Link>
 
